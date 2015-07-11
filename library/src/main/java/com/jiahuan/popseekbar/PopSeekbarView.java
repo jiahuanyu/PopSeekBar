@@ -1,205 +1,152 @@
 package com.jiahuan.popseekbar;
 
 import android.content.Context;
+import android.content.res.TypedArray;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.os.Bundle;
-import android.os.Parcelable;
+import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
 
 /**
- * Created by doom on 15/5/30.
+ * Created by doom on 15/6/30.
  */
-public class PopSeekbarView extends View
+public class PopSeekBarView extends View
 {
 
-    private static final String TAG = "PopSeekbarView";
-
-    // Status
-    private static final String INSTANCE_STATUS = "instance_status";
-    private static final String STATUS_CY = "status_cy";
-
-    // Default parameters
-    private static final int DEFAULT_START_NUMBER = 10;
-    private static final int DEFAULT_END_NUMBER = 60;
-
-    // Default color
-    private static final int DEFAULT_SMALL_CIRCLE_COLOR = 0xFFFFFFFF;
     private static final int DEFAULT_NUMBER_COLOR = 0xFFFA7777;
-    private static final int DEFAULT_CIRCLE_SHADOW_COLOR = 0xFF909090;
-    private static final int DEFAULT_SEEKBAR_COLOR = 0xFFF4EFE9;
-    private static final int DEFAULT_SEEKBAR_HIGHLIGHT_COLOR = 0xFF68C4DB;
+    private static final int DEFAULT_SEEK_BAR_COLOR = 0xFFF4EFE9;
+    private static final int DEFAULT_SEEK_BAR_HIGHLIGHT_COLOR = 0xFF68C4DB;
 
-
-    // Default dimension in dp/pt
-    private static final float DEFAULT_SMALL_CIRCLE_RADIUS = 12;
-    private static final float DEFAULT_BIG_CIRCLE_RADIUS = 30;
+    //
+    private static final float DEFAULT_SEEK_BAR_WIDTH = 5;
     private static final float DEFAULT_SMALL_NUMBER_SIZE = 16;
-    private static final float DEFAULT_BIG_NUMBER_SIZE = 20;
-    private static final float DEFAULT_CIRCLE_SHADOW_RADIUS = 2;
-    private static final float DEFAULT_CIRCLE_SHADOW_X_OFFSET = 0;
-    private static final float DEFAULT_CIRCLE_SHADOW_Y_OFFSET = 0;
-    private static final float DEFAULT_SEEKBAR_WIDTH = 5;
-    private static final float DEFAULT_HANDLER_LENGTH = 20;
-
-    // Dimension
-    private float smallCircleRadius;
-    private float smallNumberSize;
-    private float circleShadowRadius;
-    private float circleShadowXOffset;
-    private float circleShadowYOffset;
-    private float bigCircleRadius;
-    private float bigNumberSize;
-    private float seekbarWidth;  // Default
-    private float seekbarHeight; // Related to the height of the view
-    private float handlerLength;
+    private static final float DEFAULT_BIG_NUMBER_SIZE = 30;
 
 
     // Color
-    private int circleShadowColor;
-    private int circleColor;
-    private int numberColor;
-    private int seekbarColor;
-    private int seekbarHighlightColor;
+    private int mNumberColor;
+    private int mSeekBarColor;
+    private int mSeekBarHighlightColor;
 
     // Paint
-    private Paint smallCirclePaint;
-    private Paint bigCirclePaint;
-    private Paint seekbarPaint;
-    private Paint seekbarHighlightPaint;
-    private Paint smallNumberPaint;
-    private Paint bigNumberPaint;
+    private Paint mCircleButtonPaint;
+    private Paint mHandlerPaint;
+    private Paint mSeekBarPaint;
+    private Paint mSeekBarHighlightPaint;
+    private Paint mSmallNumberPaint;
+    private Paint mBigNumberPaint;
 
-    // Parameters
-    private int start;
-    private int end;
-    private float smallCircleCx;
-    private float smallCircleCy;
-    private RectF seekbarRect;
+    // Dimen
+    private float mSeekBarWidth;  // Default
+    private float mSmallNumberSize;
+    private float mBigNumberSize;
+
+    //Bitmap
+    private Bitmap mCircleButtonBitmap;
+    private Bitmap mHandlerBitmap;
+
+
+    // Rect
+    private RectF mSeekBarRect;
+
+
+    //
+    private float mCircleButtonY;
+    private float mPreY;
     private boolean isDownInSmallCircle;
-    private boolean isRestored;
-    private float preY;
+    private float mSeekBarHeight;
 
-    public PopSeekbarView(Context context)
+    private int mStart = 10;
+    private int mEnd = 60;
+    private int mDifference = mEnd - mStart;
+
+    public PopSeekBarView(Context context)
     {
         this(context, null);
     }
 
-    public PopSeekbarView(Context context, AttributeSet attrs)
+    public PopSeekBarView(Context context, AttributeSet attrs)
     {
         this(context, attrs, 0);
     }
 
-    public PopSeekbarView(Context context, AttributeSet attrs, int defStyleAttr)
+    public PopSeekBarView(Context context, AttributeSet attrs, int defStyleAttr)
     {
         super(context, attrs, defStyleAttr);
+        TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.PopSeekBarView);
+        mCircleButtonBitmap = drawableToBitmap(typedArray.getDrawable(R.styleable.PopSeekBarView_pop_button_drawable));
+        mHandlerBitmap = drawableToBitmap(typedArray.getDrawable(R.styleable.PopSeekBarView_pop_push_drawable));
+        typedArray.recycle();
         initialize();
     }
 
     private void initialize()
     {
-        Log.d(TAG, "initialize");
-        // Parameter
-        start = DEFAULT_START_NUMBER;
-        end = DEFAULT_END_NUMBER;
-
-        // Set default dimension or read from xml attributes
-        smallCircleRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SMALL_CIRCLE_RADIUS, getContext().getResources().getDisplayMetrics());
-        smallNumberSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SMALL_NUMBER_SIZE, getContext().getResources().getDisplayMetrics());
-        circleShadowRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_CIRCLE_SHADOW_RADIUS, getContext().getResources().getDisplayMetrics());
-        circleShadowXOffset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_CIRCLE_SHADOW_X_OFFSET, getContext().getResources().getDisplayMetrics());
-        circleShadowYOffset = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_CIRCLE_SHADOW_Y_OFFSET, getContext().getResources().getDisplayMetrics());
-        bigCircleRadius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_BIG_CIRCLE_RADIUS, getContext().getResources().getDisplayMetrics());
-        bigNumberSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_BIG_NUMBER_SIZE, getContext().getResources().getDisplayMetrics());
-        seekbarWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SEEKBAR_WIDTH, getContext().getResources().getDisplayMetrics());
-        handlerLength = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_HANDLER_LENGTH, getContext().getResources().getDisplayMetrics());
-
-        // Set default color or read from xml attributes
-        seekbarColor = DEFAULT_SEEKBAR_COLOR;
-        circleColor = DEFAULT_SMALL_CIRCLE_COLOR;
-        circleShadowColor = DEFAULT_CIRCLE_SHADOW_COLOR;
-        numberColor = DEFAULT_NUMBER_COLOR;
-        seekbarHighlightColor = DEFAULT_SEEKBAR_HIGHLIGHT_COLOR;
-
-        // Paint
-        seekbarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        seekbarPaint.setStyle(Paint.Style.FILL);
-        seekbarPaint.setColor(seekbarColor);
-
-        smallCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        smallCirclePaint.setStyle(Paint.Style.FILL);
-        smallCirclePaint.setColor(circleColor);
-        smallCirclePaint.setShadowLayer(circleShadowRadius, circleShadowXOffset, circleShadowYOffset, circleShadowColor);
-
-        smallNumberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        smallNumberPaint.setColor(numberColor);
-        smallNumberPaint.setTextSize(smallNumberSize);
-        smallNumberPaint.setTextAlign(Paint.Align.CENTER);
-
-        seekbarHighlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        seekbarHighlightPaint.setStyle(Paint.Style.FILL);
-        seekbarHighlightPaint.setColor(seekbarHighlightColor);
-
-        bigCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bigCirclePaint.setColor(circleColor);
-        bigCirclePaint.setStyle(Paint.Style.FILL);
-        bigCirclePaint.setShadowLayer(circleShadowRadius, circleShadowXOffset, circleShadowYOffset, circleShadowColor);
-
-        bigNumberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        bigNumberPaint.setColor(numberColor);
-        bigNumberPaint.setTextSize(bigNumberSize);
-        bigNumberPaint.setTextAlign(Paint.Align.CENTER);
-    }
+        mSeekBarWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SEEK_BAR_WIDTH, getContext().getResources().getDisplayMetrics());
+        mSmallNumberSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_SMALL_NUMBER_SIZE, getContext().getResources().getDisplayMetrics());
+        mBigNumberSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, DEFAULT_BIG_NUMBER_SIZE, getContext().getResources().getDisplayMetrics());
 
 
-    private float getFontHeight(Paint paint, String str)
-    {
-        // FontMetrics sF = paint.getFontMetrics();
-        // return sF.descent - sF.ascent;
-        Rect rect = new Rect();
-        paint.getTextBounds(str, 0, str.length(), rect);
-        return rect.height();
+        mSeekBarColor = DEFAULT_SEEK_BAR_COLOR;
+        mSeekBarHighlightColor = DEFAULT_SEEK_BAR_HIGHLIGHT_COLOR;
+        mNumberColor = DEFAULT_NUMBER_COLOR;
+
+
+        mSeekBarPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mSeekBarPaint.setStyle(Paint.Style.FILL);
+        mSeekBarPaint.setColor(mSeekBarColor);
+
+        mCircleButtonPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        mHandlerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        mSeekBarHighlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mSeekBarHighlightPaint.setStyle(Paint.Style.FILL);
+        mSeekBarHighlightPaint.setColor(mSeekBarHighlightColor);
+
+        mSmallNumberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mSmallNumberPaint.setStyle(Paint.Style.FILL);
+        mSmallNumberPaint.setColor(mNumberColor);
+        mSmallNumberPaint.setTextSize(mSmallNumberSize);
+
+        mBigNumberPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mBigNumberPaint.setStyle(Paint.Style.FILL);
+        mBigNumberPaint.setColor(mNumberColor);
+        mBigNumberPaint.setTextSize(mBigNumberSize);
     }
 
     @Override
     protected void onDraw(Canvas canvas)
     {
-        Log.d(TAG, "onDraw");
-//        canvas.drawColor(Color.RED);
-        // Seekbar
-        canvas.drawRoundRect(seekbarRect, seekbarWidth / 2, seekbarWidth / 2, seekbarPaint);
-
-        // Highlight Seekbar
-        RectF hlSeekbarRect = new RectF((getWidth() - seekbarWidth) / 2, smallCircleCy, (getWidth() + seekbarWidth) / 2, getHeight() - smallCircleRadius - circleShadowRadius);
-        canvas.drawRoundRect(hlSeekbarRect, seekbarWidth / 2, seekbarWidth / 2, seekbarHighlightPaint);
-
-        if (isDownInSmallCircle)
+        super.onDraw(canvas);
+        canvas.drawRoundRect(mSeekBarRect, mSeekBarWidth / 2, mSeekBarWidth / 2, mSeekBarPaint);
+        RectF rect = new RectF((getWidth() - mSeekBarWidth) / 2, mCircleButtonY, (getWidth() + mSeekBarWidth) / 2, getHeight() - mCircleButtonBitmap.getHeight() / 2);
+        canvas.drawRoundRect(rect, mSeekBarWidth / 2, mSeekBarWidth / 2, mSeekBarHighlightPaint);
+        int value = (int) (mStart + mDifference * ((getHeight() - mCircleButtonY - mCircleButtonBitmap.getWidth() / 2) / mSeekBarHeight));
+        if (!isDownInSmallCircle)
         {
-            // Big circle
-            canvas.drawCircle(smallCircleCx, smallCircleCy - handlerLength - bigCircleRadius, bigCircleRadius, bigCirclePaint);
-            // Handler
-            canvas.save();
-            canvas.clipRect(smallCircleCx - smallCircleRadius - circleShadowRadius, smallCircleCy - handlerLength - circleShadowRadius, smallCircleCx + smallCircleRadius + circleShadowRadius, smallCircleCy + smallCircleRadius + circleShadowRadius);
-            RectF r = new RectF(smallCircleCx - smallCircleRadius, smallCircleCy - handlerLength - bigCircleRadius, smallCircleCx + smallCircleRadius, smallCircleCy + smallCircleRadius);
-            canvas.drawRoundRect(r, smallCircleRadius, smallCircleRadius, bigCirclePaint);
-            canvas.restore();
-            // Big number
-            canvas.drawText(((int) (start + (end - start) / seekbarHeight * (seekbarHeight - smallCircleCy + circleShadowRadius + 2 * bigCircleRadius + handlerLength))) + "", smallCircleCx, smallCircleCy - handlerLength - bigCircleRadius + getFontHeight(bigNumberPaint, "0") / 2, bigNumberPaint);
+            canvas.drawBitmap(mCircleButtonBitmap, (getMeasuredWidth() - mCircleButtonBitmap.getWidth()) / 2, mCircleButtonY - mCircleButtonBitmap.getHeight() / 2, mCircleButtonPaint);
+            canvas.drawText(value + "", (getWidth() - mSmallNumberPaint.measureText(value + "")) / 2, mCircleButtonY + getFontHeight(mSmallNumberPaint, value + "") / 2, mSmallNumberPaint);
         }
         else
         {
-            // Small circle
-            canvas.drawCircle(smallCircleCx, smallCircleCy, smallCircleRadius, smallCirclePaint);
-            // Small Number
-            canvas.drawText(((int) (start + (end - start) / seekbarHeight * (seekbarHeight - smallCircleCy + circleShadowRadius + 2 * bigCircleRadius + handlerLength))) + "", smallCircleCx, smallCircleCy + getFontHeight(smallNumberPaint, "0") / 2, smallNumberPaint);
+            canvas.drawBitmap(mHandlerBitmap, (getMeasuredWidth() - mHandlerBitmap.getWidth()) / 2, mCircleButtonY - mHandlerBitmap.getHeight() + mCircleButtonBitmap.getHeight() / 2, mHandlerPaint);
+            canvas.drawText(value + "", (getWidth() - mBigNumberPaint.measureText(value + "")) / 2, mCircleButtonY - (mHandlerBitmap.getHeight() - mCircleButtonBitmap.getHeight() / 2 - mHandlerBitmap.getWidth() / 2) + getFontHeight(mBigNumberPaint, value + "") / 2, mBigNumberPaint);
         }
+    }
 
+    private float getFontHeight(Paint paint, String str)
+    {
+        Rect rect = new Rect();
+        paint.getTextBounds(str, 0, str.length(), rect);
+        return rect.height();
     }
 
     @Override
@@ -210,25 +157,25 @@ public class PopSeekbarView extends View
             case MotionEvent.ACTION_DOWN:
                 if (isInCircle(event.getX(), event.getY()))
                 {
-                    Log.d(TAG, "InCircle");
-                    preY = event.getY();
+                    mPreY = event.getY();
                     isDownInSmallCircle = true;
+                    invalidate();
                 }
                 break;
 
             case MotionEvent.ACTION_MOVE:
                 if (isDownInSmallCircle)
                 {
-                    smallCircleCy += (event.getY() - preY);
-                    if (smallCircleCy > getHeight() - smallCircleRadius - circleShadowRadius)
+                    mCircleButtonY += (event.getY() - mPreY);
+                    if (mCircleButtonY > getHeight() - mCircleButtonBitmap.getHeight() / 2)
                     {
-                        smallCircleCy = getHeight() - smallCircleRadius - circleShadowRadius;
+                        mCircleButtonY = getHeight() - mCircleButtonBitmap.getHeight() / 2;
                     }
-                    else if (smallCircleCy < (circleShadowRadius + 2 * bigCircleRadius + handlerLength))
+                    else if (mCircleButtonY < mHandlerBitmap.getHeight() - mCircleButtonBitmap.getHeight() / 2)
                     {
-                        smallCircleCy = circleShadowRadius + 2 * bigCircleRadius + handlerLength;
+                        mCircleButtonY = mHandlerBitmap.getHeight() - mCircleButtonBitmap.getHeight() / 2;
                     }
-                    preY = event.getY();
+                    mPreY = event.getY();
                     invalidate();
                 }
                 break;
@@ -244,9 +191,10 @@ public class PopSeekbarView extends View
         return true;
     }
 
+
     private boolean isInCircle(float x, float y)
     {
-        if (Math.sqrt((x - smallCircleCx) * (x - smallCircleCx) + (y - smallCircleCy) * (y - smallCircleCy)) < smallCircleRadius)
+        if (Math.sqrt((x - getWidth() / 2) * (x - getWidth() / 2) + (y - mCircleButtonY) * (y - mCircleButtonY)) < mCircleButtonBitmap.getWidth() / 2)
         {
             return true;
         }
@@ -256,42 +204,28 @@ public class PopSeekbarView extends View
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec)
     {
-        Log.d(TAG, "onMeasure");
+        int width = mHandlerBitmap.getWidth();
         int height = MeasureSpec.getSize(heightMeasureSpec);
-        int width = (int) ((bigCircleRadius + circleShadowRadius) * 2); // Whatever, the width is the double bigCircleRadius
-        seekbarHeight = height - smallCircleRadius - handlerLength - 2 * bigCircleRadius - 2 * circleShadowRadius;
-        smallCircleCx = width / 2;
-        if (!isRestored)
-        {
-            smallCircleCy = height - smallCircleRadius - circleShadowRadius;
-            isRestored = false;
-        }
-        seekbarRect = new RectF((width - seekbarWidth) / 2, 2 * bigCircleRadius + circleShadowRadius + handlerLength, (width + seekbarWidth) / 2, height - smallCircleRadius - circleShadowRadius);
         setMeasuredDimension(width, height);
+        mSeekBarRect = new RectF((width - mSeekBarWidth) / 2, mHandlerBitmap.getHeight() - mCircleButtonBitmap.getHeight() / 2, (width + mSeekBarWidth) / 2, height - mCircleButtonBitmap.getHeight() / 2);
+        mCircleButtonY = getMeasuredHeight() - mCircleButtonBitmap.getHeight() / 2;
+        mSeekBarHeight = getHeight() - mHandlerBitmap.getHeight();
     }
 
-    @Override
-    protected Parcelable onSaveInstanceState()
+    private Bitmap drawableToBitmap(Drawable drawable)
     {
-        Log.d(TAG, "onSaveInstanceState");
-        Bundle bundle = new Bundle();
-        bundle.putParcelable(INSTANCE_STATUS, super.onSaveInstanceState());
-        bundle.putFloat(STATUS_CY, smallCircleCy);
-        return bundle;
+        if (drawable == null)
+            return null;
+        int w = drawable.getIntrinsicWidth();
+        int h = drawable.getIntrinsicHeight();
+        Bitmap.Config config =
+                drawable.getOpacity() != PixelFormat.OPAQUE ? Bitmap.Config.ARGB_8888
+                        : Bitmap.Config.RGB_565;
+        Bitmap bitmap = Bitmap.createBitmap(w, h, config);
+        Canvas canvas = new Canvas(bitmap);
+        drawable.setBounds(0, 0, w, h);
+        drawable.draw(canvas);
+        return bitmap;
     }
 
-    @Override
-    protected void onRestoreInstanceState(Parcelable state)
-    {
-        Log.d(TAG, "onRestoreInstanceState");
-        if (state instanceof Bundle)
-        {
-            Bundle bundle = (Bundle) state;
-            super.onRestoreInstanceState(bundle.getParcelable(INSTANCE_STATUS));
-            smallCircleCy = bundle.getFloat(STATUS_CY);
-            isRestored = true;
-            return;
-        }
-        super.onRestoreInstanceState(state);
-    }
 }
