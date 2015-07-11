@@ -10,12 +10,14 @@ Developed by AndroidStudio
 
 ## Usage
 ```xml
-<com.jiahuan.popseekbar.PopSeekbarView
-    android:id="@+id/psk"
-    android:layout_width="wrap_content"
-    android:layout_height="300dp"
-    android:layout_centerInParent="true">
-</com.jiahuan.popseekbar.PopSeekbarView>
+<com.jiahuan.popseekbar.PopSeekBarView
+        android:id="@+id/psk"
+        android:layout_width="wrap_content"
+        android:layout_height="300dp"
+        android:layout_centerInParent="true"
+        app:pop_button_drawable="@mipmap/seekbar_circle"
+        app:pop_push_drawable="@mipmap/seekbar_push">
+</com.jiahuan.popseekbar.PopSeekBarView>
 ```
 Whatever the width is set, the width only related to the size of the big circle radius, is equal to the double size of big circle radius.
 
