@@ -1,6 +1,6 @@
 # PopSeekbar
-Nice and pop seek bar on Android platform
-<img src="./images/sample.gif" width="200px" height="auto" />
+Nice and pop seek bar on Android platform <br/>
+<img src="./images/sample.gif" width="200px" height="auto" /> 
 
 ## System Requirement
 Android v2.2+
