@@ -1,4 +1,4 @@
-# PopSeekbar
+# PopSeekbar [No Longer Support]
 Nice and pop seek bar on Android platform <br/>
 <img src="./images/sample.gif" width="200px" height="auto" /> 
 
